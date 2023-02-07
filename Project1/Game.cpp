@@ -1,12 +1,19 @@
 #include "Game.hpp"
 #include "TextureManager.h"
-#include "GameObject.h"
 #include "Map.h"
+#include "ECS/Components.h"
+#include "SRC/Vector2D.h"
 
-GameObject* player;
-GameObject* enemy;
 Map* map;
+Manager manager;
+
 SDL_Renderer* Game::renderer = nullptr;
+SDL_Event Game::event;
+
+
+auto& player(manager.addEntity());
+
+
 Game::Game() {};
 Game:: ~Game() {};
 
@@ -31,31 +38,41 @@ void Game::init(const char* title, int xpos, int ypos, int width, int height, bo
 	else {
 		isRunning = false;
 	}
-	player = new GameObject("assets/player.png", 0,0);
-	enemy = new GameObject("assets/enemy.png", 100,100);
+
 	map = new Map();
+
+	player.addComponent<TransformComponent>();
+	player.addComponent<SpriteComponent>("assets/player.png");
+	player.addComponent<KeyboardController>();
 }
 
 void Game::handleEvents() {
-	SDL_Event event;
+	
+	
+
 	SDL_PollEvent(&event);
+
 	switch (event.type) {
+
 	case SDL_QUIT:
 		isRunning = false;
+		break;
+
+	default:
 		break;
 	}
 }
 
 void Game::update() {
-	player->Update();
-	enemy->Update();
+	manager.refresh();
+	manager.update();
 }
 
 void Game::render() {
 	SDL_RenderClear(renderer);
 	map->DrawMap();
-	player->Render();
-	enemy->Render();
+
+	manager.draw();
 	SDL_RenderPresent(renderer);
 }
 

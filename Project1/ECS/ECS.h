@@ -16,9 +16,10 @@ inline ComponentID getComponentTypeID() {
 	return lastID++;
 }
 
-template <typename T> inline ComponentID getComponentTypeID() noexcept {
-	static ComponentID typeID = getComponentID();
-	return typeID();
+template <typename T> inline ComponentID getComponentTypeID() noexcept
+{
+	static ComponentID typeID = getComponentTypeID();
+	return typeID;
 }
 
 constexpr std::size_t maxComponents = 32;
@@ -33,6 +34,7 @@ public:
 	virtual void draw() {}
 	virtual ~Component() {}
 };
+
 class Entity {
 
 private:
@@ -45,18 +47,20 @@ private:
 public:
 	void update() {
 		for (auto& c : components) c->update();
-		for (auto& c : components) c->draw();
 	}
 
-	void draw() {}
+	void draw() {
+		for (auto& c : components) c->draw();
+	}
 	bool isActive() { return active; }
 	void destroy() { active = false; }
 
 	template <typename T> bool hasComponent() const {
-		return ComponentBitSet[getComponentID<T>];
+		return ComponentBitSet[getComponentTypeID<T>()];
 	};
 
-	template <typename T, typename... TArgs> T& addComponent(TArgs&&... mArgs) {
+	template <typename T, typename... TArgs> T& addComponent(TArgs&&... mArgs)
+	{
 
 		T* c(new T(std::forward<TArgs>(mArgs)...));
 
@@ -71,9 +75,39 @@ public:
 		c->init();
 		return *c;
 	}
+
 	template<typename T> T& getComponent() const {
 		auto ptr(componentArray[getComponentTypeID<T>()]);
 		return *static_cast<T*>(ptr);
 	}
+};
+class Manager {
+private:
+	std::vector<std::unique_ptr<Entity>> entities;
+
+public:
+	void update() {
+		for (auto& e : entities) e->update();
+	}
+	void draw()
+	{
+		for (auto& e : entities) e->draw();
+	}
+	void refresh()
+	{
+		entities.erase(std::remove_if(std::begin(entities), std::end(entities), [](const std::unique_ptr<Entity>& mEntity)
+			{
+				return !mEntity->isActive();
+			}),
+			std::end(entities));
+	}
+
+	Entity& addEntity() {
+		Entity* e = new Entity();
+		std::unique_ptr<Entity> uPtr{ e };
+		entities.emplace_back(std::move(uPtr));
+		return *e;
+	}
+
 };
 
